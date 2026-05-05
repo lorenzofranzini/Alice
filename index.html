@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pong Classico - Liceo Edition</title>
+    <title>Pong Advanced - Liceo Classico Edition</title>
     <style>
         body {
-            background-color: #222;
+            background-color: #111; /* Sfondo quasi nero per far risaltare il neon */
             color: white;
             display: flex;
             flex-direction: column;
@@ -15,129 +15,266 @@
             height: 100vh;
             margin: 0;
             font-family: 'Courier New', Courier, monospace;
+            overflow: hidden; /* Impedisce barre di scorrimento casuali */
+        }
+        h1 {
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #0ff; /* Effetto Neon */
+        }
+        #gameContainer {
+            position: relative;
         }
         canvas {
-            border: 5px solid #fff;
+            border: 4px solid #fff;
             background-color: #000;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.5); /* Bagliore azzurro */
+            cursor: none; /* Nasconde il mouse sopra il gioco */
         }
-        h1 { margin-bottom: 10px; }
-        .controls { margin-top: 10px; color: #aaa; }
+        .controls {
+            margin-top: 10px;
+            color: #888;
+            font-size: 0.9em;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 
     <h1>PONG</h1>
-    <canvas id="pongCanvas" width="800" height="400"></canvas>
-    <div class="controls">Usa il mouse o il tocco per muovere la tua racchetta (destra)</div>
+    <div id="gameContainer">
+        <canvas id="pongCanvas" width="800" height="400"></canvas>
+    </div>
+    <div class="controls">
+        Muovi il mouse per controllare la tua racchetta (destra).<br>
+        L'angolo di rimbalzo dipende da dove colpisci la palla. La velocità aumenta!
+    </div>
 
     <script>
         const canvas = document.getElementById("pongCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Parametri del gioco
-        const ballRadius = 10;
-        const paddleHeight = 100;
-        const paddleWidth = 10;
+        // --- Configurazione Iniziale Realistica ---
+        const PADDLE_HEIGHT = 90;
+        const PADDLE_WIDTH = 12;
+        const BALL_RADIUS = 8;
+        const INITIAL_BALL_SPEED = 5;
+        const SPEED_INCREMENT = 0.5; // Quanto accelera la palla a ogni colpo
+        const COM_LEVEL = 0.06; // Livello IA (0.01 = facilissimo, 0.2 = quasi imbattibile)
 
-        let ballX = canvas.width / 2;
-        let ballY = canvas.height / 2;
-        let ballDX = 4; // Velocità X
-        let ballDY = 4; // Velocità Y
+        // Oggetti di Gioco
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: BALL_RADIUS,
+            speed: INITIAL_BALL_SPEED,
+            dx: INITIAL_BALL_SPEED,
+            dy: INITIAL_BALL_SPEED
+        };
 
-        let playerY = (canvas.height - paddleHeight) / 2;
-        let computerY = (canvas.height - paddleHeight) / 2;
-        let playerScore = 0;
-        let computerScore = 0;
+        let player = {
+            x: canvas.width - PADDLE_WIDTH - 10, // Un po' staccato dal bordo
+            y: (canvas.height - PADDLE_HEIGHT) / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            score: 0
+        };
 
-        // Controllo Mouse
-        canvas.addEventListener("mousemove", (e) => {
+        let computer = {
+            x: 10, // Un po' staccato dal bordo
+            y: (canvas.height - PADDLE_HEIGHT) / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            score: 0
+        };
+
+        // Particelle per l'effetto collisione
+        let particles = [];
+
+        // --- Controllo Interattivo (Mouse) ---
+        canvas.addEventListener("mousemove", movePaddle);
+
+        function movePaddle(e) {
             let rect = canvas.getBoundingClientRect();
-            playerY = e.clientY - rect.top - paddleHeight / 2;
-        });
-
-        function draw() {
-            // Pulizia Canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Disegno Linea Centrale
-            ctx.setLineDash([10, 10]);
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, 0);
-            ctx.lineTo(canvas.width / 2, canvas.height);
-            ctx.strokeStyle = "white";
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            // Disegno Racchette
-            ctx.fillStyle = "white";
-            // Computer (Sinistra)
-            ctx.fillRect(0, computerY, paddleWidth, paddleHeight);
-            // Giocatore (Destra)
-            ctx.fillRect(canvas.width - paddleWidth, playerY, paddleWidth, paddleHeight);
-
-            // Disegno Palla
-            ctx.beginPath();
-            ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Disegno Punteggio
-            ctx.font = "32px Courier New";
-            ctx.fillText(computerScore, canvas.width / 4, 50);
-            ctx.fillText(playerScore, (canvas.width / 4) * 3, 50);
-
-            moveBall();
-            moveComputer();
-            
-            requestAnimationFrame(draw);
+            // Posiziona il centro della racchetta dove si trova il mouse
+            player.y = e.clientY - rect.top - player.height / 2;
         }
 
+        // --- Core Loop (Il ciclo continuo) ---
+        function update() {
+            moveBall();
+            moveComputer();
+            updateParticles();
+        }
+
+        function draw() {
+            // Disegno Sfondo
+            drawRect(0, 0, canvas.width, canvas.height, "#000");
+
+            // Disegno Linea Centrale
+            drawNet();
+
+            // Disegno Punteggi Neon
+            drawText(computer.score, canvas.width / 4, canvas.height / 5, "48px", "#0ff");
+            drawText(player.score, 3 * canvas.width / 4, canvas.height / 5, "48px", "#0ff");
+
+            // Disegno Racchette con Bagliore
+            drawPaddle(computer.x, computer.y, computer.width, computer.height, "#fff");
+            drawPaddle(player.x, player.y, player.width, player.height, "#fff");
+
+            // Disegno Particelle
+            drawParticles();
+
+            // Disegno Palla con Bagliore
+            drawBall(ball.x, ball.y, ball.radius, "#fff");
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Funzioni di Disegno Avanzate ---
+        function drawRect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, w, h);
+        }
+
+        function drawBall(x, y, r, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2, true);
+            ctx.closePath();
+            ctx.fill();
+
+            // Bagliore Palla
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
+        }
+
+        function drawPaddle(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, w, h);
+            
+            // Bagliore Racchetta
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "rgba(0, 255, 255, 0.5)";
+        }
+
+        function drawNet() {
+            for (let i = 0; i <= canvas.height; i += 15) {
+                drawRect(canvas.width / 2 - 1, i, 2, 10, "#333"); // Linea scura
+            }
+            // Reset bagliore per non influenzare altri oggetti
+            ctx.shadowBlur = 0;
+        }
+
+        function drawText(text, x, y, size, color) {
+            ctx.fillStyle = color;
+            ctx.font = size + " 'Courier New'";
+            ctx.fillText(text, x, y);
+            ctx.shadowBlur = 0; // Reset
+        }
+
+        // --- Logica Fisica e IA (Realismo) ---
         function moveBall() {
-            ballX += ballDX;
-            ballY += ballDY;
+            ball.x += ball.dx;
+            ball.y += ball.dy;
 
-            // Rimbalzo pareti sopra e sotto
-            if (ballY + ballRadius > canvas.height || ballY - ballRadius < 0) {
-                ballDY = -ballDY;
+            // Rimbalzo Soffitto/Pavimento (Perfettamente Elastico)
+            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
+                ball.dy = -ball.dy;
             }
 
-            // Collisione Racchetta Computer
-            if (ballX - ballRadius < paddleWidth) {
-                if (ballY > computerY && ballY < computerY + paddleHeight) {
-                    ballDX = -ballDX;
-                    ballDX *= 1.05; // Accelera un po'
-                } else if (ballX < 0) {
-                    playerScore++;
-                    resetBall();
-                }
+            // Controllo Collisione Racchette
+            // Capisce quale racchetta deve colpire in base alla direzione X
+            let paddle = (ball.x + ball.radius < canvas.width / 2) ? computer : player;
+
+            if (collision(ball, paddle)) {
+                // EFFETTO FISICO REALISTICO
+                // Calcola DOVE la palla ha colpito la racchetta (-0.5 sopra, 0 centro, 0.5 sotto)
+                let hitPoint = (ball.y - (paddle.y + paddle.height / 2)) / (paddle.height / 2);
+                
+                // Calcola l'angolo in radianti (max 45 gradi)
+                let angleRad = (Math.PI / 4) * hitPoint;
+
+                // Cambia direzione X
+                let direction = (ball.x + ball.radius < canvas.width / 2) ? 1 : -1;
+                
+                // Aggiorna le velocità in base all'angolo calcolato (Trigonometria)
+                ball.dx = direction * ball.speed * Math.cos(angleRad);
+                ball.dy = ball.speed * Math.sin(angleRad);
+
+                // Aumenta la velocità per il prossimo colpo
+                ball.speed += SPEED_INCREMENT;
+                
+                // Crea effetto particelle
+                createParticles(ball.x, ball.y);
             }
 
-            // Collisione Racchetta Giocatore
-            if (ballX + ballRadius > canvas.width - paddleWidth) {
-                if (ballY > playerY && ballY < playerY + paddleHeight) {
-                    ballDX = -ballDX;
-                    ballDX *= 1.05;
-                } else if (ballX > canvas.width) {
-                    computerScore++;
-                    resetBall();
-                }
+            // Punteggio e Reset
+            if (ball.x - ball.radius < 0) {
+                player.score++;
+                resetBall();
+            } else if (ball.x + ball.radius > canvas.width) {
+                computer.score++;
+                resetBall();
             }
+        }
+
+        function collision(b, p) {
+            // Semplice AABB collision (Axis-Aligned Bounding Box)
+            return b.x + b.radius > p.x && b.x - b.radius < p.x + p.width &&
+                   b.y + b.radius > p.y && b.y - b.radius < p.y + p.height;
         }
 
         function moveComputer() {
-            // Semplice IA che segue la palla
-            let targetY = ballY - paddleHeight / 2;
-            computerY += (targetY - computerY) * 0.1; 
+            // IA con imperfezione. Segue la palla ma con un ritardo (COM_LEVEL)
+            computer.y += (ball.y - (computer.y + computer.height / 2)) * COM_LEVEL;
         }
 
         function resetBall() {
-            ballX = canvas.width / 2;
-            ballY = canvas.height / 2;
-            ballDX = ballDX > 0 ? -4 : 4; // Cambia direzione al reset
-            ballDY = 4;
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.speed = INITIAL_BALL_SPEED;
+            // Inverte direzione orizzontale, angolo casuale verticale
+            ball.dx = (ball.dx > 0) ? -INITIAL_BALL_SPEED : INITIAL_BALL_SPEED;
+            ball.dy = (Math.random() - 0.5) * 6; // Angolo casuale iniziale
         }
 
-        draw();
+        // --- Sistema di Particelle (Interattività Visiva) ---
+        function createParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 4,
+                    dy: (Math.random() - 0.5) * 4,
+                    radius: Math.random() * 3,
+                    life: 30 // Durata in frame
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            ctx.shadowBlur = 0;
+            for (let p of particles) {
+                drawRect(p.x, p.y, p.radius, p.radius, `rgba(255, 255, 255, ${p.life / 30})`);
+            }
+        }
+
+        // Avvio del gioco
+        gameLoop();
     </script>
 </body>
 </html>
