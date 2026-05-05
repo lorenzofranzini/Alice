@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Classico - Liceo Edition</title>
+    <style>
+        body {
+            background-color: #222;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        canvas {
+            border: 5px solid #fff;
+            background-color: #000;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+        h1 { margin-bottom: 10px; }
+        .controls { margin-top: 10px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <h1>PONG</h1>
+    <canvas id="pongCanvas" width="800" height="400"></canvas>
+    <div class="controls">Usa il mouse o il tocco per muovere la tua racchetta (destra)</div>
+
+    <script>
+        const canvas = document.getElementById("pongCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Parametri del gioco
+        const ballRadius = 10;
+        const paddleHeight = 100;
+        const paddleWidth = 10;
+
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height / 2;
+        let ballDX = 4; // Velocità X
+        let ballDY = 4; // Velocità Y
+
+        let playerY = (canvas.height - paddleHeight) / 2;
+        let computerY = (canvas.height - paddleHeight) / 2;
+        let playerScore = 0;
+        let computerScore = 0;
+
+        // Controllo Mouse
+        canvas.addEventListener("mousemove", (e) => {
+            let rect = canvas.getBoundingClientRect();
+            playerY = e.clientY - rect.top - paddleHeight / 2;
+        });
+
+        function draw() {
+            // Pulizia Canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Disegno Linea Centrale
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.strokeStyle = "white";
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Disegno Racchette
+            ctx.fillStyle = "white";
+            // Computer (Sinistra)
+            ctx.fillRect(0, computerY, paddleWidth, paddleHeight);
+            // Giocatore (Destra)
+            ctx.fillRect(canvas.width - paddleWidth, playerY, paddleWidth, paddleHeight);
+
+            // Disegno Palla
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Disegno Punteggio
+            ctx.font = "32px Courier New";
+            ctx.fillText(computerScore, canvas.width / 4, 50);
+            ctx.fillText(playerScore, (canvas.width / 4) * 3, 50);
+
+            moveBall();
+            moveComputer();
+            
+            requestAnimationFrame(draw);
+        }
+
+        function moveBall() {
+            ballX += ballDX;
+            ballY += ballDY;
+
+            // Rimbalzo pareti sopra e sotto
+            if (ballY + ballRadius > canvas.height || ballY - ballRadius < 0) {
+                ballDY = -ballDY;
+            }
+
+            // Collisione Racchetta Computer
+            if (ballX - ballRadius < paddleWidth) {
+                if (ballY > computerY && ballY < computerY + paddleHeight) {
+                    ballDX = -ballDX;
+                    ballDX *= 1.05; // Accelera un po'
+                } else if (ballX < 0) {
+                    playerScore++;
+                    resetBall();
+                }
+            }
+
+            // Collisione Racchetta Giocatore
+            if (ballX + ballRadius > canvas.width - paddleWidth) {
+                if (ballY > playerY && ballY < playerY + paddleHeight) {
+                    ballDX = -ballDX;
+                    ballDX *= 1.05;
+                } else if (ballX > canvas.width) {
+                    computerScore++;
+                    resetBall();
+                }
+            }
+        }
+
+        function moveComputer() {
+            // Semplice IA che segue la palla
+            let targetY = ballY - paddleHeight / 2;
+            computerY += (targetY - computerY) * 0.1; 
+        }
+
+        function resetBall() {
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            ballDX = ballDX > 0 ? -4 : 4; // Cambia direzione al reset
+            ballDY = 4;
+        }
+
+        draw();
+    </script>
+</body>
+</html>
