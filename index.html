@@ -3,278 +3,307 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pong Advanced - Liceo Classico Edition</title>
+    <title>Summer Escape - Relaxing Simulator</title>
     <style>
-        body {
-            background-color: #111; /* Sfondo quasi nero per far risaltare il neon */
-            color: white;
+        :root {
+            --sky-blue: #a2d2ff;
+            --sand: #fefae0;
+            --grass: #ccd5ae;
+            --accent: #ffafcc;
+            --text-color: #5e548e;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--sky-blue);
+            color: var(--text-color);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-container {
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
-            font-family: 'Courier New', Courier, monospace;
-            overflow: hidden; /* Impedisce barre di scorrimento casuali */
-        }
-        h1 {
-            margin-bottom: 5px;
-            text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #0ff; /* Effetto Neon */
-        }
-        #gameContainer {
             position: relative;
+            background: linear-gradient(to bottom, #a2d2ff 0%, #ffffff 100%);
         }
-        canvas {
-            border: 4px solid #fff;
-            background-color: #000;
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.5); /* Bagliore azzurro */
-            cursor: none; /* Nasconde il mouse sopra il gioco */
-        }
-        .controls {
-            margin-top: 10px;
-            color: #888;
-            font-size: 0.9em;
+
+        .screen {
+            display: none;
+            width: 90%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             text-align: center;
+            border: 5px solid white;
+            animation: fadeIn 0.8s ease;
         }
+
+        .active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 { font-size: 2.5rem; color: #bde0fe; text-shadow: 2px 2px #ffafcc; }
+        
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 0 #fb6f92;
+        }
+
+        button:hover { transform: scale(1.05); background-color: #ff8fab; }
+        button:active { transform: translateY(2px); box-shadow: none; }
+
+        .destinations {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .dest-card {
+            background: white;
+            padding: 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: 0.3s;
+        }
+
+        .dest-card:hover { border-color: var(--accent); background: var(--sand); }
+        .selected { border-color: var(--accent); background: var(--sand) !important; }
+
+        .routine-item {
+            margin: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .dialogue-box {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            margin-top: 20px;
+            border: 3px solid var(--sky-blue);
+            min-height: 80px;
+        }
+
+        #airplane-view {
+            width: 100%;
+            height: 200px;
+            background: #e0f2f1;
+            margin: 20px 0;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #ccc;
+        }
+
+        .cloud {
+            position: absolute;
+            background: white;
+            width: 60px;
+            height: 30px;
+            border-radius: 20px;
+            animation: moveClouds 10s linear infinite;
+        }
+
+        @keyframes moveClouds {
+            from { right: -100px; }
+            to { right: 100%; }
+        }
+
+        #timer { font-weight: bold; color: var(--accent); font-size: 1.5rem; }
+
+        .character-img { font-size: 50px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <h1>PONG</h1>
-    <div id="gameContainer">
-        <canvas id="pongCanvas" width="800" height="400"></canvas>
+<div id="game-container">
+    <div id="screen-choice" class="screen active">
+        <div class="character-img">✈️</div>
+        <h1>Dove vorresti andare?</h1>
+        <p>Scegli la tua prossima avventura rilassante...</p>
+        <div class="destinations">
+            <div class="dest-card" onclick="selectDest('New York', '🗽')">🗽<br>New York</div>
+            <div class="dest-card" onclick="selectDest('Parigi', '🗼')">🗼<br>Parigi</div>
+            <div class="dest-card" onclick="selectDest('Sidney', '🐨')">🐨<br>Sidney</div>
+            <div class="dest-card" onclick="selectDest('Il Cairo', 'Pyramid')">🐫<br>Il Cairo</div>
+            <div class="dest-card" onclick="selectDest('Maldive', '🏝️')">🏝️<br>Maldive</div>
+            <div class="dest-card" onclick="selectDest('Caraibi', '🦜')">🦜<br>Caraibi</div>
+        </div>
+        <button id="buy-btn" style="display:none; margin-top: 30px;" onclick="nextScreen('screen-routine')">Compra Biglietto 🎫</button>
     </div>
-    <div class="controls">
-        Muovi il mouse per controllare la tua racchetta (destra).<br>
-        L'angolo di rimbalzo dipende da dove colpisci la palla. La velocità aumenta!
+
+    <div id="screen-routine" class="screen">
+        <div class="character-img">🌅</div>
+        <h1>Buongiorno!</h1>
+        <p>È il giorno della partenza. Prepariamoci con calma.</p>
+        <div class="routine-item"><span>🪥 Lavati i denti</span> <button onclick="completeStep(this)">Fatto</button></div>
+        <div class="routine-item"><span>🧼 Lavati il viso</span> <button onclick="completeStep(this)">Fatto</button></div>
+        <div class="routine-item"><span>👕 Vestiti bene</span> <button onclick="completeStep(this)">Fatto</button></div>
+        <button id="go-airport" style="display:none" onclick="nextScreen('screen-airport')">Vai in Aeroporto 🚗</button>
     </div>
 
-    <script>
-        const canvas = document.getElementById("pongCanvas");
-        const ctx = canvas.getContext("2d");
+    <div id="screen-airport" class="screen">
+        <div class="character-img">🏛️</div>
+        <h1>Aeroporto Internazionale</h1>
+        <p>Controlla il tabellone dei voli per il tuo gate.</p>
+        <div style="background: #333; color: #fbef42; padding: 20px; font-family: monospace; border-radius: 10px; margin: 20px 0;">
+            <div id="flight-info"></div>
+        </div>
+        <input type="text" id="gate-input" placeholder="Inserisci il Gate..." style="padding: 10px; border-radius: 10px; border: 1px solid #ccc;">
+        <button onclick="checkGate()">Imbarcati ✈️</button>
+    </div>
 
-        // --- Configurazione Iniziale Realistica ---
-        const PADDLE_HEIGHT = 90;
-        const PADDLE_WIDTH = 12;
-        const BALL_RADIUS = 8;
-        const INITIAL_BALL_SPEED = 5;
-        const SPEED_INCREMENT = 0.5; // Quanto accelera la palla a ogni colpo
-        const COM_LEVEL = 0.06; // Livello IA (0.01 = facilissimo, 0.2 = quasi imbattibile)
+    <div id="screen-flight" class="screen">
+        <div class="character-img">💺</div>
+        <h1>In Volo verso <span id="dest-name"></span></h1>
+        <div id="airplane-view">
+            <div class="cloud" style="top:20px; animation-duration: 15s;"></div>
+            <div class="cloud" style="top:80px; animation-duration: 10s;"></div>
+            <div class="cloud" style="top:140px; animation-duration: 18s;"></div>
+        </div>
+        <div class="dialogue-box" id="flight-dialogue">
+            Vicino di posto: "Ciao! Anche tu vai in vacanza? Io non vedo l'ora di arrivare..."
+        </div>
+        <div id="flight-actions">
+            <button onclick="talkToNeighbor()">Chiacchiera</button>
+            <button onclick="watchMovie()">Guarda un Film</button>
+        </div>
+        <p>Atterraggio tra: <span id="timer">120</span>s</p>
+    </div>
 
-        // Oggetti di Gioco
-        let ball = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            radius: BALL_RADIUS,
-            speed: INITIAL_BALL_SPEED,
-            dx: INITIAL_BALL_SPEED,
-            dy: INITIAL_BALL_SPEED
-        };
+    <div id="screen-explore" class="screen">
+        <div class="character-img" id="final-emoji">🏝️</div>
+        <h1>Benvenuto a <span id="final-dest"></span>!</h1>
+        <p>Goditi il sole e il relax. Cosa vuoi fare oggi?</p>
+        <div class="dialogue-box" id="explore-msg">L'aria è bellissima qui.</div>
+        <div class="destinations">
+            <button onclick="exploreAction('beach')">🏖️ Vai in Spiaggia</button>
+            <button onclick="exploreAction('museum')">🏛️ Visita un Museo</button>
+            <button onclick="exploreAction('people')">👋 Conosci gente locale</button>
+            <button onclick="location.reload()">🔄 Ricomincia</button>
+        </div>
+    </div>
+</div>
 
-        let player = {
-            x: canvas.width - PADDLE_WIDTH - 10, // Un po' staccato dal bordo
-            y: (canvas.height - PADDLE_HEIGHT) / 2,
-            width: PADDLE_WIDTH,
-            height: PADDLE_HEIGHT,
-            score: 0
-        };
+<script>
+    let state = {
+        destination: '',
+        emoji: '',
+        gate: '',
+        seat: '',
+        stepsCompleted: 0,
+        timeLeft: 120
+    };
 
-        let computer = {
-            x: 10, // Un po' staccato dal bordo
-            y: (canvas.height - PADDLE_HEIGHT) / 2,
-            width: PADDLE_WIDTH,
-            height: PADDLE_HEIGHT,
-            score: 0
-        };
+    function selectDest(name, emoji) {
+        state.destination = name;
+        state.emoji = emoji;
+        state.gate = 'G' + Math.floor(Math.random() * 20 + 1);
+        state.seat = Math.floor(Math.random() * 30 + 1) + String.fromCharCode(65 + Math.floor(Math.random() * 6));
+        
+        document.querySelectorAll('.dest-card').forEach(card => card.classList.remove('selected'));
+        event.currentTarget.classList.add('selected');
+        document.getElementById('buy-btn').style.display = 'inline-block';
+        document.getElementById('buy-btn').innerText = `Compra Biglietto per ${name} 🎫`;
+    }
 
-        // Particelle per l'effetto collisione
-        let particles = [];
+    function nextScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
 
-        // --- Controllo Interattivo (Mouse) ---
-        canvas.addEventListener("mousemove", movePaddle);
-
-        function movePaddle(e) {
-            let rect = canvas.getBoundingClientRect();
-            // Posiziona il centro della racchetta dove si trova il mouse
-            player.y = e.clientY - rect.top - player.height / 2;
+        if(id === 'screen-airport') {
+            document.getElementById('flight-info').innerHTML = `VOLO: AC2024 | DEST: ${state.destination.toUpperCase()} | GATE: ${state.gate} | STATO: IMBARCO`;
         }
-
-        // --- Core Loop (Il ciclo continuo) ---
-        function update() {
-            moveBall();
-            moveComputer();
-            updateParticles();
+        if(id === 'screen-flight') {
+            document.getElementById('dest-name').innerText = state.destination;
+            startFlightTimer();
         }
+    }
 
-        function draw() {
-            // Disegno Sfondo
-            drawRect(0, 0, canvas.width, canvas.height, "#000");
-
-            // Disegno Linea Centrale
-            drawNet();
-
-            // Disegno Punteggi Neon
-            drawText(computer.score, canvas.width / 4, canvas.height / 5, "48px", "#0ff");
-            drawText(player.score, 3 * canvas.width / 4, canvas.height / 5, "48px", "#0ff");
-
-            // Disegno Racchette con Bagliore
-            drawPaddle(computer.x, computer.y, computer.width, computer.height, "#fff");
-            drawPaddle(player.x, player.y, player.width, player.height, "#fff");
-
-            // Disegno Particelle
-            drawParticles();
-
-            // Disegno Palla con Bagliore
-            drawBall(ball.x, ball.y, ball.radius, "#fff");
+    function completeStep(btn) {
+        btn.disabled = true;
+        btn.innerText = "✅";
+        state.stepsCompleted++;
+        if(state.stepsCompleted === 3) {
+            document.getElementById('go-airport').style.display = 'inline-block';
         }
+    }
 
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
+    function checkGate() {
+        const val = document.getElementById('gate-input').value.toUpperCase();
+        if(val === state.gate) {
+            alert(`Gate Corretto! Il tuo posto è il ${state.seat}. Benvenuto a bordo!`);
+            nextScreen('screen-flight');
+        } else {
+            alert(`Mmm, il tabellone dice che il gate per ${state.destination} è il ${state.gate}...`);
         }
+    }
 
-        // --- Funzioni di Disegno Avanzate ---
-        function drawRect(x, y, w, h, color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, w, h);
-        }
+    function talkToNeighbor() {
+        const msgs = [
+            "Vicino: 'Ho sentito che lì il cibo è fantastico!'",
+            "Vicino: 'È la mia prima volta qui, sono emozionato.'",
+            "Vicino: 'Spero di fare delle belle foto!'"
+        ];
+        document.getElementById('flight-dialogue').innerText = msgs[Math.floor(Math.random()*msgs.length)];
+    }
 
-        function drawBall(x, y, r, color) {
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2, true);
-            ctx.closePath();
-            ctx.fill();
+    function watchMovie() {
+        document.getElementById('flight-dialogue').innerText = "Stai guardando una commedia rilassante... ti senti riposato.";
+    }
 
-            // Bagliore Palla
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
-        }
-
-        function drawPaddle(x, y, w, h, color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, w, h);
-            
-            // Bagliore Racchetta
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "rgba(0, 255, 255, 0.5)";
-        }
-
-        function drawNet() {
-            for (let i = 0; i <= canvas.height; i += 15) {
-                drawRect(canvas.width / 2 - 1, i, 2, 10, "#333"); // Linea scura
+    function startFlightTimer() {
+        const timerEl = document.getElementById('timer');
+        const interval = setInterval(() => {
+            state.timeLeft--;
+            timerEl.innerText = state.timeLeft;
+            if(state.timeLeft <= 0) {
+                clearInterval(interval);
+                finishFlight();
             }
-            // Reset bagliore per non influenzare altri oggetti
-            ctx.shadowBlur = 0;
-        }
+        }, 1000);
+    }
 
-        function drawText(text, x, y, size, color) {
-            ctx.fillStyle = color;
-            ctx.font = size + " 'Courier New'";
-            ctx.fillText(text, x, y);
-            ctx.shadowBlur = 0; // Reset
-        }
+    function finishFlight() {
+        document.getElementById('final-dest').innerText = state.destination;
+        document.getElementById('final-emoji').innerText = state.emoji;
+        nextScreen('screen-explore');
+    }
 
-        // --- Logica Fisica e IA (Realismo) ---
-        function moveBall() {
-            ball.x += ball.dx;
-            ball.y += ball.dy;
+    function exploreAction(type) {
+        const box = document.getElementById('explore-msg');
+        if(type === 'beach') box.innerText = "L'acqua è cristallina e la sabbia calda. Ti senti in pace.";
+        if(type === 'museum') box.innerText = "Quanta cultura! Hai imparato cose nuove sulla storia locale.";
+        if(type === 'people') box.innerText = "Hai incontrato un pescatore locale che ti ha raccontato storie incredibili.";
+    }
+</script>
 
-            // Rimbalzo Soffitto/Pavimento (Perfettamente Elastico)
-            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
-                ball.dy = -ball.dy;
-            }
-
-            // Controllo Collisione Racchette
-            // Capisce quale racchetta deve colpire in base alla direzione X
-            let paddle = (ball.x + ball.radius < canvas.width / 2) ? computer : player;
-
-            if (collision(ball, paddle)) {
-                // EFFETTO FISICO REALISTICO
-                // Calcola DOVE la palla ha colpito la racchetta (-0.5 sopra, 0 centro, 0.5 sotto)
-                let hitPoint = (ball.y - (paddle.y + paddle.height / 2)) / (paddle.height / 2);
-                
-                // Calcola l'angolo in radianti (max 45 gradi)
-                let angleRad = (Math.PI / 4) * hitPoint;
-
-                // Cambia direzione X
-                let direction = (ball.x + ball.radius < canvas.width / 2) ? 1 : -1;
-                
-                // Aggiorna le velocità in base all'angolo calcolato (Trigonometria)
-                ball.dx = direction * ball.speed * Math.cos(angleRad);
-                ball.dy = ball.speed * Math.sin(angleRad);
-
-                // Aumenta la velocità per il prossimo colpo
-                ball.speed += SPEED_INCREMENT;
-                
-                // Crea effetto particelle
-                createParticles(ball.x, ball.y);
-            }
-
-            // Punteggio e Reset
-            if (ball.x - ball.radius < 0) {
-                player.score++;
-                resetBall();
-            } else if (ball.x + ball.radius > canvas.width) {
-                computer.score++;
-                resetBall();
-            }
-        }
-
-        function collision(b, p) {
-            // Semplice AABB collision (Axis-Aligned Bounding Box)
-            return b.x + b.radius > p.x && b.x - b.radius < p.x + p.width &&
-                   b.y + b.radius > p.y && b.y - b.radius < p.y + p.height;
-        }
-
-        function moveComputer() {
-            // IA con imperfezione. Segue la palla ma con un ritardo (COM_LEVEL)
-            computer.y += (ball.y - (computer.y + computer.height / 2)) * COM_LEVEL;
-        }
-
-        function resetBall() {
-            ball.x = canvas.width / 2;
-            ball.y = canvas.height / 2;
-            ball.speed = INITIAL_BALL_SPEED;
-            // Inverte direzione orizzontale, angolo casuale verticale
-            ball.dx = (ball.dx > 0) ? -INITIAL_BALL_SPEED : INITIAL_BALL_SPEED;
-            ball.dy = (Math.random() - 0.5) * 6; // Angolo casuale iniziale
-        }
-
-        // --- Sistema di Particelle (Interattività Visiva) ---
-        function createParticles(x, y) {
-            for (let i = 0; i < 10; i++) {
-                particles.push({
-                    x: x,
-                    y: y,
-                    dx: (Math.random() - 0.5) * 4,
-                    dy: (Math.random() - 0.5) * 4,
-                    radius: Math.random() * 3,
-                    life: 30 // Durata in frame
-                });
-            }
-        }
-
-        function updateParticles() {
-            for (let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.x += p.dx;
-                p.y += p.dy;
-                p.life--;
-                if (p.life <= 0) particles.splice(i, 1);
-            }
-        }
-
-        function drawParticles() {
-            ctx.shadowBlur = 0;
-            for (let p of particles) {
-                drawRect(p.x, p.y, p.radius, p.radius, `rgba(255, 255, 255, ${p.life / 30})`);
-            }
-        }
-
-        // Avvio del gioco
-        gameLoop();
-    </script>
 </body>
 </html>
